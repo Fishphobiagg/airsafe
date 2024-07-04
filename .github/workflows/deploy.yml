@@ -47,6 +47,7 @@ jobs:
           chmod 400 key.pem
 
       - name: Connect to EC2 and deploy__
+        env:
           ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
           EC2_HOST: ${{ secrets.EC2_HOST }}
