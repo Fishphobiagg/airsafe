@@ -65,6 +65,6 @@ jobs:
             echo "Running Docker container"
             docker stop luggage-server || true
             docker rm luggage-server || true
-            docker run -d --name luggage-server $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+            docker run -d --name luggage-server -p 8000:8000 $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           EOF
           rm key.pem
