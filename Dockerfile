@@ -12,8 +12,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Copy the config.yml from the GitHub Secrets during build time
-ARG CONFIG_YML_CONTENT
-RUN echo "${CONFIG_YML_CONTENT}" > /root/config.yml
+ARG CONFIG_YML
+RUN echo "${CONFIG_YML}" > /root/config.yml
 
 # Expose the port FastAPI runs on
 EXPOSE 8000
