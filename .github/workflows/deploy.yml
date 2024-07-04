@@ -48,6 +48,7 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           IMAGE_TAG: latest
           AWS_REGION: ${{ secrets.AWS_REGION }}
+          PEM_KEY: ${{ secrets.PEM_KEY }}
         run: |
           echo "Creating key.pem file"
           echo "${PEM_KEY}" > key.pem
