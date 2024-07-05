@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import List
 
 class ProhibitedItemBase(BaseModel):
     category: str
@@ -13,6 +14,16 @@ class ProhibitedItemCreate(ProhibitedItemBase):
 
 class ProhibitedItem(ProhibitedItemBase):
     id: int
+    
+    class Config:
+        from_attributes = True
+
+class SearchResponse(BaseModel):
+    search_term: str
+    results: List[ProhibitedItem] = []
 
     class Config:
         from_attributes = True
+
+class ItemNotFound(BaseModel):
+    message: str
