@@ -20,6 +20,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Create config.yml file from CONFIG_YML secret 
+        run: echo "${{ secrets.CONFIG_YML }}" > config.yml
+
       - name: Log in to Amazon ECR
         run: |
           aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
@@ -41,27 +44,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Create omh.pem file
-        run: |
-          echo "${{ secrets.PEM_KEY }}" > key.pem
-          chmod 400 key.pem
-
-      - name: Deploy to EC2
+      - name: Connect to EC2 and deploy__
         env:
           ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
           EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ec2-user
           IMAGE_TAG: latest
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          PEM_KEY: ${{ secrets.PEM_KEY }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i key.pem $EC2_USER@$EC2_HOST << 'EOF'
-            aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin $ECR_REGISTRY
+          echo "Creating key.pem file"
+          echo "${PEM_KEY}" > key.pem
+          chmod 400 key.pem
+          echo "Connecting to EC2 instance and pulling Docker image"
+          ssh -t -o StrictHostKeyChecking=no -i key.pem ec2-user@$EC2_HOST << EOF
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
             docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-            docker stop yr-container || true
-            docker rm yr-container || true
-            docker run -d --name yr-container -p 80:8000 $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+            echo "Removing old Docker images"
+            docker images | grep $ECR_REGISTRY/$ECR_REPOSITORY | awk '{print \$3}' | tail -n +2 | xargs -I {} docker rmi -f {}
+            echo "Running Docker container"
+            docker stop luggage-server || true
+            docker rm luggage-server || true
+            docker run -d --name luggage-server -p 8000:8000 $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           EOF
-
-      - name: Clean up
-        run: |
           rm key.pem

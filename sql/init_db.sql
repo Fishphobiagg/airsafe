@@ -1,12 +1,29 @@
+-- Category 테이블 생성
+CREATE TABLE category (
+    id BIGINT PRIMARY KEY,
+    category VARCHAR(20) NOT NULL,
+    image VARCHAR(255)
+);
+
+-- ProhibitedItems 테이블 생성
 CREATE TABLE prohibited_items (
-    id SERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
     category VARCHAR(255),
-    subcategory VARCHAR(255),
     item_name VARCHAR(255),
     cabin BOOLEAN,
     trust BOOLEAN,
-    description TEXT
+    description TEXT,
+    search_vector TSVECTOR NOT NULL
 );
+
+-- SearchHistory 테이블 생성
+CREATE TABLE search_history (
+    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    search_term VARCHAR(255),
+    search_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    prohibited_item_id BIGINT REFERENCES prohibited_items(id)
+);
+
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
