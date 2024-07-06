@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import text, func
 from app.models import ProhibitedItem, SearchHistory
 from app.schemas import ProhibitedItemCreate
 import asyncio
@@ -17,12 +17,20 @@ def search_prohibited_items(db: Session, query: str):
     ).params(query=query).limit(10).all()
 
 async def create_search_history(db: Session, search_term: str, prohibited_item_id: int = None):
-    search_history = SearchHistory(search_term=search_term, prohibited_item_id=prohibited_item_id)
-    db.add(search_history)
-    await asyncio.to_thread(db.commit)
-    await asyncio.to_thread(db.refresh, search_history)
-    return search_history
-
+    existing_record = db.query(SearchHistory).filter(SearchHistory.search_term == search_term).first()
+    if existing_record:
+        existing_record.search_count += 1
+        existing_record.search_date = func.now()
+        await asyncio.to_thread(db.commit)
+        await asyncio.to_thread(db.refresh, existing_record)
+        return existing_record
+    else:
+        search_history = SearchHistory(search_term=search_term, prohibited_item_id=prohibited_item_id)
+        db.add(search_history)
+        await asyncio.to_thread(db.commit)
+        await asyncio.to_thread(db.refresh, search_history)
+        return search_history
+    
 def get_prohibited_item_by_id(db: Session, id: int) -> ProhibitedItem:
     return db.query(ProhibitedItem).filter(ProhibitedItem.id == id).first()
 
