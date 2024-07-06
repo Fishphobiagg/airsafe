@@ -63,8 +63,8 @@ async def get_item_by_id(item_id: int, db: Session = Depends(get_db)):
                         status_code=404, 
                         media_type="application/json"
         )
-    await create_search_history(db, search_term=f"id: {item_id}", prohibited_item_id=item.id)
-    return 
+    await create_search_history(db, search_term=item.item_name, prohibited_item_id=item.id)
+    return item
 
 @app.get("/items/search/", 
          response_model=Union[ProhibitedItem, ItemNotFound],

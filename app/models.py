@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, BigInteger, TIMESTAMP, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, Boolean, BigInteger, TIMESTAMP, ForeignKey, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.types import UserDefinedType
 from sqlalchemy.ext.compiler import compiles
@@ -34,8 +34,8 @@ class Category(Base):
 
 class SearchHistory(Base):
     __tablename__ = "search_history"
-    id = Column(BigInteger, primary_key=True, index=True, autoincrement=True)
+    id = Column(BigInteger, primary_key=True, index=True)
     search_term = Column(String(255))
-    search_date = Column(TIMESTAMP, default=None)
     prohibited_item_id = Column(BigInteger, ForeignKey('prohibited_items.id'), nullable=True)
+    search_count = Column(Integer, default=1)
     prohibited_item = relationship("ProhibitedItem", back_populates="search_histories")
