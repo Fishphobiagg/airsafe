@@ -20,7 +20,6 @@ async def create_search_history(db: Session, search_term: str, prohibited_item_i
     existing_record = db.query(SearchHistory).filter(SearchHistory.search_term == search_term).first()
     if existing_record:
         existing_record.search_count += 1
-        existing_record.search_date = func.now()
         await asyncio.to_thread(db.commit)
         await asyncio.to_thread(db.refresh, existing_record)
         return existing_record
