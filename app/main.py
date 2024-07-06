@@ -14,7 +14,7 @@ init_db()
 
 app = FastAPI()
 
-origins = ["https://air-safe.co.kr", "http://air-safe.co.kr"]
+origins = ["https://air-safe.co.kr", "http://air-safe.co.kr", "http://localhost:3000"]
 
 app.add_middleware(
     CORSMiddleware,
