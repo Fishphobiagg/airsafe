@@ -24,6 +24,13 @@ CREATE TABLE search_history (
     prohibited_item_id BIGINT REFERENCES prohibited_items(id)
 );
 
+-- 건의사항 테이블
+CREATE TABLE suggestions (
+    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    user_id BIGINT,
+    suggestion_text TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 

@@ -18,19 +18,23 @@ class ProhibitedItem(Base):
     __tablename__ = "prohibited_items"
 
     id = Column(BigInteger, primary_key=True, index=True, autoincrement=True)
-    category = Column(String, index=True)
+    category_id = Column(BigInteger, ForeignKey('category.id'))
     item_name = Column(String, index=True)
     cabin = Column(Boolean, index=True)
     trust = Column(Boolean, index=True)
     description = Column(Text)
     search_vector = Column(TSVector, nullable=False)
+
+    category = relationship("Category", back_populates="prohibited_items")
     search_histories = relationship("SearchHistory", back_populates="prohibited_item")
 
 class Category(Base):
     __tablename__ = "category"
-    id = Column(BigInteger, primary_key=True, index=True)
-    category = Column(String(20), index=True)
+    id = Column(BigInteger, primary_key=True, index=True, autoincrement=True)
+    name = Column(String(20), index=True)
     image = Column(String(255), nullable=True)
+
+    prohibited_items = relationship("ProhibitedItem", back_populates="category")
 
 class SearchHistory(Base):
     __tablename__ = "search_history"
@@ -38,4 +42,11 @@ class SearchHistory(Base):
     search_term = Column(String(255))
     prohibited_item_id = Column(BigInteger, ForeignKey('prohibited_items.id'), nullable=True)
     search_count = Column(Integer, default=1)
+    
     prohibited_item = relationship("ProhibitedItem", back_populates="search_histories")
+
+class Suggestion(Base):
+    __tablename__ = "suggestions"
+    id = Column(BigInteger, primary_key=True, index=True)
+    suggestion_text = Column(Text, nullable=False)
+    created_at = Column(TIMESTAMP, default=func.now())
