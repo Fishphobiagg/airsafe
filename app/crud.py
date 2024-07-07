@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func
-from app.models import ProhibitedItem, SearchHistory
-from app.schemas import ProhibitedItemCreate
+from app.models import ProhibitedItem, SearchHistory, Suggestion
+from app.schemas import ProhibitedItemCreate, SuggestionCreate
 import asyncio
 
 async def create_prohibited_item(db: Session, item: ProhibitedItemCreate):
@@ -35,3 +35,10 @@ def get_prohibited_item_by_id(db: Session, id: int) -> ProhibitedItem:
 
 def get_prohibited_item_by_name(db: Session, name: str):
     return db.query(ProhibitedItem).filter(text("search_vector @@ plainto_tsquery('english', :name)")).params(name=name).first()
+
+async def create_suggestion(db: Session, suggestion: SuggestionCreate):
+    db_suggestion = Suggestion(**suggestion.model_dump())
+    db.add(db_suggestion)
+    await asyncio.to_thread(db.commit)
+    await asyncio.to_thread(db.refresh, db_suggestion)
+    return db_suggestion
