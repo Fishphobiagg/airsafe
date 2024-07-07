@@ -1,9 +1,9 @@
-from fastapi import FastAPI, Depends, Response
+from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 
-from app.schemas import ProhibitedItem, SearchResponse, ItemNotFound
-from app.crud import get_prohibited_item_by_id, get_prohibited_item_by_name, create_search_history, search_prohibited_items
+from app.schemas import ProhibitedItem, SearchResponse, ItemNotFound, Suggestion, SuggestionCreate
+from app.crud import get_prohibited_item_by_id, get_prohibited_item_by_name, create_search_history, search_prohibited_items, create_suggestion
 from app.database import SessionLocal, init_db
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -85,3 +85,16 @@ async def get_item_by_search_term(
         )
     await create_search_history(db, search_term=search_term, prohibited_item_id=item.id)
     return item
+
+@app.post("/suggestions/", 
+          response_model=Suggestion,
+          status_code=201,
+          summary="사용자의 건의사항을 추가하는 API",
+          description="사용자가 입력한 건의사항을 데이터베이스에 저장합니다.")
+async def create_user_suggestion(
+    suggestion: SuggestionCreate,
+    db: Session = Depends(get_db)
+):
+    new_suggestion = await create_suggestion(db=db, suggestion=suggestion)
+    validated_suggestion = Suggestion.model_validate(new_suggestion)
+    return JSONResponse(content={"message": "건의사항이 성공적으로 전달되었습니다.", "data": validated_suggestion.to_dict()}, status_code=201)
