@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func
-from app.models import ProhibitedItem, SearchHistory, Suggestion
-from app.schemas import ProhibitedItemCreate, SuggestionCreate
+from app.models import ProhibitedItem, SearchHistory, Suggestion, Subcategory, Condition
+from app.schemas import ProhibitedItemCreate, SuggestionCreate, SubcategoryCreate, ConditionCreate
 import asyncio
 
 async def create_prohibited_item(db: Session, item: ProhibitedItemCreate):
@@ -11,10 +11,43 @@ async def create_prohibited_item(db: Session, item: ProhibitedItemCreate):
     await asyncio.to_thread(db.refresh, db_item)
     return db_item
 
-def search_prohibited_items(db: Session, query: str):
-    return db.query(ProhibitedItem).filter(
-        text("search_vector @@ plainto_tsquery('english', :query)")
-    ).params(query=query).limit(10).all()
+
+def search_prohibited_items(db: Session, query: str, is_international: bool, is_domestic: bool):
+    subcategory_query = db.query(Subcategory).filter(Subcategory.search_vector.op('@@')(func.plainto_tsquery('english', query))).first()
+
+    if subcategory_query:
+        items_query = db.query(ProhibitedItem).filter(ProhibitedItem.subcategory_id == subcategory_query.id)
+    else:
+        items_query = db.query(ProhibitedItem).filter(
+            ProhibitedItem.search_vector.op('@@')(func.plainto_tsquery('english', query))
+        )
+
+    items = items_query.all()
+
+    results = []
+    for item in items:
+        item_conditions = get_item_conditions_by_id(db, item.id, is_international, is_domestic)
+
+        item_dict = {
+            "id": item.id,
+            "category": item.subcategory.category.name,
+            "subcategory": item.subcategory.name,
+            "item_name": item.item_name,
+            "image_path": item.image_path or "",
+            "conditions": [condition for condition in item_conditions]
+        }
+        results.append(item_dict)
+
+    return results
+
+def get_item_conditions_by_id(db: Session, prohibited_item_id: int, is_international: bool = None, is_domestic: bool = None):
+    conditions_query = db.query(Condition).filter(Condition.prohibited_item_id == prohibited_item_id)
+
+    if is_international:
+        conditions_query = conditions_query.filter(Condition.is_international == is_international)
+    if is_domestic:
+        conditions_query = conditions_query.filter(Condition.is_domestic == is_domestic)
+    return conditions_query.all()
 
 async def create_search_history(db: Session, search_term: str, prohibited_item_id: int = None):
     existing_record = db.query(SearchHistory).filter(SearchHistory.search_term == search_term).first()
@@ -42,3 +75,24 @@ async def create_suggestion(db: Session, suggestion: SuggestionCreate):
     await asyncio.to_thread(db.commit)
     await asyncio.to_thread(db.refresh, db_suggestion)
     return db_suggestion
+
+async def insert_subcategory(db: Session, subcategory: SubcategoryCreate, category_id: int):
+    db_subcategory = Subcategory(category_id=category_id, **subcategory.model_dump())
+    db.add(db_subcategory)
+    await asyncio.to_thread(db.commit)
+    await asyncio.to_thread(db.refresh, db_subcategory)
+    return db_subcategory
+
+async def insert_prohibited_item(db: Session, item: ProhibitedItemCreate, subcategory_id: int):
+    db_item = ProhibitedItem(subcategory_id=subcategory_id, **item.model_dump())
+    db.add(db_item)
+    await asyncio.to_thread(db.commit)
+    await asyncio.to_thread(db.refresh, db_item)
+    return db_item
+
+async def insert_condition(db: Session, prohibited_item_id: int, condition: ConditionCreate):
+    db_condition = Condition(prohibited_item_id=prohibited_item_id, **condition.model_dump())
+    db.add(db_condition)
+    await asyncio.to_thread(db.commit)
+    await asyncio.to_thread(db.refresh, db_condition)
+    return db_condition

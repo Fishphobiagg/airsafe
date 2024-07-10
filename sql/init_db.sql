@@ -1,7 +1,7 @@
 -- Category 테이블 생성
 CREATE TABLE category (
     id BIGINT PRIMARY KEY,
-    category VARCHAR(20) NOT NULL,
+    name VARCHAR(20) NOT NULL,
     image VARCHAR(255)
 );
 
@@ -27,7 +27,6 @@ CREATE TABLE search_history (
 -- 건의사항 테이블
 CREATE TABLE suggestions (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    user_id BIGINT,
     suggestion_text TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
