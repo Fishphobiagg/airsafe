@@ -21,9 +21,10 @@ class Condition(ConditionBase):
         from_attributes = True
 
 class ProhibitedItemBase(BaseModel):
+    category: str
+    subcategory: str
     item_name: str
     image_path: str
-    search_vector: str
 
 class ProhibitedItemCreate(ProhibitedItemBase):
     pass
