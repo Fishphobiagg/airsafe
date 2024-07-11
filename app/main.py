@@ -1,8 +1,8 @@
-from fastapi import FastAPI, Depends, Query
+from fastapi import FastAPI, Depends, Path, Body, Query
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 
-from app.schemas import ProhibitedItem, SearchResponse, ItemNotFound, Suggestion, SuggestionCreate, Condition, Subcategory, SubcategoryCreate, ProhibitedItemCreate, ConditionCreate  
+from app.schemas import ProhibitedItem, SearchResponse,ProhibitedItemBase, ItemNotFound, Suggestion, ProhibitedItemList, SuggestionCreate, Condition, Subcategory, SubcategoryCreate, ProhibitedItemCreate, ConditionCreate, ProhibitedItemCondition
 from app.crud import get_prohibited_item_by_id, get_prohibited_item_by_name, create_search_history, search_prohibited_items, create_suggestion, insert_condition, insert_prohibited_item, insert_subcategory
 from app.database import SessionLocal, init_db
 
@@ -12,7 +12,7 @@ from typing import Optional, Union
 
 init_db()
 
-app = FastAPI()
+app = FastAPI(swagger_ui_parameters={"syntaxHighlight.theme": "obsidian"})
 
 origins = ["*"]
 
@@ -33,17 +33,15 @@ def get_db():
 
 
 @app.get("/items/",
-         response_model=Union[SearchResponse, ItemNotFound],
-         summary="검색어를 통해 검색되는 여러 건의 결과를 검색하는 api",
-         description="입력된 검색어를 통해 검색되는 품목을 반환",
+         response_model=Union[ProhibitedItemList, ItemNotFound],
+         summary="검색어를 통해 자동완성된 검색 결과를 반환하는 api",
+         description="입력된 검색어를 통해 자동완성 되는 품목을 반환",
          status_code=200)
 async def search_items(
     search_term: Optional[str] = None,
-    is_international: Optional[bool] = None,
-    is_domestic: Optional[bool] = None,
     db: Session = Depends(get_db)
 ):
-    items = search_prohibited_items(db, query=search_term, is_international=is_international, is_domestic=is_domestic)
+    items = search_prohibited_items(db, query=search_term)
     if not items:
         await create_search_history(db, search_term=search_term)
         return JSONResponse(content=ItemNotFound(message=f"No items found for search term: {search_term}").model_dump(),
@@ -51,44 +49,78 @@ async def search_items(
                             media_type="application/json")
 
     await create_search_history(db, search_term=search_term)
-    return SearchResponse(search_term=search_term, results=items)
+    return ProhibitedItemList(
+        search_result=[ProhibitedItemBase(
+            id=item.id,
+            item_name=item.item_name,
+            category=item.subcategory.category.name,
+            subcategory=item.subcategory.name,
+            image_path=item.image_path,
+            category_image=item.subcategory.category.image
+        ) for item in items]
+    )
 
-
-@app.get("/items/{item_id}", 
-         response_model=Union[ProhibitedItem, ItemNotFound],
+@app.get("/items/{item_id}/", 
+         response_model=Union[ProhibitedItemCondition, ItemNotFound],
          status_code=200,
          summary="아이템 id로 아이템을 단건 검색하는 api",
+         description="국제선, 국내선 구분을 두고 아이템 id의 반입 조건을 반환"
          )
-async def get_item_by_id(item_id: int, db: Session = Depends(get_db)):
-    item = get_prohibited_item_by_id(db=db, id=item_id)
+async def get_item_by_id(
+    item_id: int = Path(..., description="The ID of the item to retrieve"),
+    is_international: Optional[bool] = Query(None),
+    is_domestic: Optional[bool] = Query(None),
+    db: Session = Depends(get_db)
+):
+    item = get_prohibited_item_by_id(db=db, id=item_id, is_international=is_international, is_domestic=is_domestic)
     if item is None:
         await create_search_history(db, search_term=f"id: {item_id}")
         return JSONResponse(content=ItemNotFound(message=f"id : {item_id} is not found").model_dump_json(), 
-                        status_code=404, 
-                        media_type="application/json"
-        )
+                            status_code=404, 
+                            media_type="application/json")
     await create_search_history(db, search_term=item.item_name, prohibited_item_id=item.id)
-    return item
+    return ProhibitedItemCondition(
+        id=item.id,
+        category=item.subcategory.category.name,
+        subcategory=item.subcategory.name,
+        item_name=item.item_name,
+        image_path=item.image_path,
+        conditions=item.conditions
+    )
 
-@app.get("/items/search/", 
-         response_model=Union[ProhibitedItem, ItemNotFound],
+
+@app.get("/items/search/conditions/", 
+         response_model=Union[SearchResponse, ItemNotFound],
          status_code=200,
          summary="사용자가 입력한 검색어를 단건 검색",
          description="쿼리 스트링으로 검색어 요청"
         )
 async def get_item_by_search_term(
-    search_term: Optional[str],
+    search_term: Optional[str] = Query(None),
+    is_international: Optional[bool] = Query(None),
+    is_domestic: Optional[bool] = Query(None),
     db: Session = Depends(get_db)
 ):
-    item = get_prohibited_item_by_name(name=search_term, db=db)
-    if item is None:    
+    items = get_prohibited_item_by_name(db=db, name=search_term, is_international=is_international, is_domestic=is_domestic)
+    if not items:
         await create_search_history(db, search_term=search_term)
-        return JSONResponse(content=ItemNotFound(message=f"id : {search_term} is not found").model_dump_json(), 
-                        status_code=404, 
-                        media_type="application/json"
+        return JSONResponse(content=ItemNotFound(message=f"Item : {search_term} is not found").model_dump_json(), 
+                            status_code=404, 
+                            media_type="application/json")
+    
+    results = []
+    for item in items:
+        item_dict = ProhibitedItemCondition(
+            id=item.id,
+            category=item.subcategory.category.name,
+            subcategory=item.subcategory.name,
+            item_name=item.item_name,
+            image_path=item.image_path,
+            conditions=item.conditions
         )
-    await create_search_history(db, search_term=search_term, prohibited_item_id=item.id)
-    return item
+        results.append(item_dict)
+    await create_search_history(db, search_term=search_term, prohibited_item_id=items[0].id)
+    return SearchResponse(search_term=search_term, results=results)
 
 @app.post("/suggestions/", 
           response_model=Suggestion,
@@ -116,14 +148,14 @@ async def create_subcategory(
     new_subcategory = await insert_subcategory(db=db, subcategory=subcategory, category_id=category_id)
     return new_subcategory
 
-@app.post("subcategorys/{subcategory_id}/items/", 
+@app.post("/subcategorys/{subcategory_id}/items/", 
           response_model=ProhibitedItem,
           status_code=201,
           summary="아이템을 추가하는 API",
           description="서브카테고리 ID와 아이템 정보를 입력받아 아이템을 추가합니다.")
 async def create_prohibited_item(
-    subcategory_id: int,
-    item: ProhibitedItemCreate,
+    subcategory_id: int = Path(..., description="서브카테고리 ID"),
+    item: ProhibitedItemCreate = Body(...),
     db: Session = Depends(get_db)
 ):
     new_item = await insert_prohibited_item(db=db, item=item, subcategory_id=subcategory_id)
@@ -135,8 +167,8 @@ async def create_prohibited_item(
           summary="조건을 추가하는 API",
           description="아이템 ID와 조건 정보를 입력받아 조건을 추가합니다.")
 async def create_condition(
-    item_id: int,
-    condition: ConditionCreate,
+    item_id: int = Path(..., description="아이템 id"),
+    condition: ConditionCreate= Body(...),
     db: Session = Depends(get_db)
 ):
     new_condition = await insert_condition(db=db, prohibited_item_id=item_id, condition=condition)

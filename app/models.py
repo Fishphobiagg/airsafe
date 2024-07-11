@@ -56,6 +56,7 @@ class Condition(Base):
     cabin = Column(String(1))  # 'O', '△', 'X'
     trust = Column(String(1))  # 'O', '△', 'X'
     condition_description = Column(Text)
+    reference = Column(Text, nullable=True)
 
     prohibited_item = relationship("ProhibitedItem", back_populates="conditions")
 
