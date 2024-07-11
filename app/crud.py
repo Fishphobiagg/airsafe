@@ -13,13 +13,13 @@ async def create_prohibited_item(db: Session, item: ProhibitedItemCreate):
 
 
 def search_prohibited_items(db: Session, query: str):
-    items_query = db.query(ProhibitedItem).filter(
-        ProhibitedItem.search_vector.op('@@')(func.plainto_tsquery('english', query))
-    )
+    ts_query = func.to_tsquery('pg_catalog.english', f'{query}:*')
+    items = db.query(ProhibitedItem).filter(ProhibitedItem.search_vector.op('@@')(ts_query)).all()
 
-    items = items_query.all()
+    for item in items:
+        conditions_query = db.query(Condition).filter(Condition.prohibited_item_id == item.id)
+        item.conditions = conditions_query.all()
     return items
-
 def get_item_conditions_by_id(db: Session, prohibited_item_id: int, is_international: bool = None, is_domestic: bool = None):
     conditions_query = db.query(Condition).filter(Condition.prohibited_item_id == prohibited_item_id)
 
