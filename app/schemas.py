@@ -31,8 +31,13 @@ class ProhibitedItemBase(BaseModel):
 class ProhibitedItemList(BaseModel):
     search_result: List[ProhibitedItemBase]
 
-class ProhibitedItemCreate(ProhibitedItemBase):
-    pass
+class ProhibitedItemCreate(BaseModel):
+    item_name: str
+    image_path: str
+    search_vector: str
+
+class ProhibitedItemCreateResponse(ProhibitedItemCreate):
+    id: int
 
 class ProhibitedItem(ProhibitedItemBase):
     conditions: List[Condition]

@@ -81,10 +81,15 @@ async def create_suggestion(db: Session, suggestion: SuggestionCreate):
     return db_suggestion
 
 async def insert_subcategory(db: Session, subcategory: SubcategoryCreate, category_id: int):
+    print("여기까지")
     db_subcategory = Subcategory(category_id=category_id, **subcategory.model_dump())
+    print("여기까지")
     db.add(db_subcategory)
+    print("여기까지")
     await asyncio.to_thread(db.commit)
+    print("여기까지")
     await asyncio.to_thread(db.refresh, db_subcategory)
+    print("여기까지")
     return db_subcategory
 
 async def insert_prohibited_item(db: Session, item: ProhibitedItemCreate, subcategory_id: int):

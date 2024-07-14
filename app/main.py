@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, Path, Body, Query
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 
-from app.schemas import ProhibitedItem, SearchResponse,ProhibitedItemBase, ItemNotFound, Suggestion, ProhibitedItemList, SuggestionCreate, Condition, Subcategory, SubcategoryCreate, ProhibitedItemCreate, ConditionCreate, ProhibitedItemCondition
+from app.schemas import ProhibitedItem, ProhibitedItemCreateResponse, SearchResponse,ProhibitedItemBase, ItemNotFound, Suggestion, ProhibitedItemList, SuggestionCreate, Condition, Subcategory, SubcategoryCreate, ProhibitedItemCreate, ConditionCreate, ProhibitedItemCondition
 from app.crud import get_prohibited_item_by_id, get_prohibited_item_by_name, create_search_history, search_prohibited_items, create_suggestion, insert_condition, insert_prohibited_item, insert_subcategory
 from app.database import SessionLocal, init_db
 
@@ -146,10 +146,11 @@ async def create_subcategory(
     db: Session = Depends(get_db)
 ):
     new_subcategory = await insert_subcategory(db=db, subcategory=subcategory, category_id=category_id)
+    print("여기까지")
     return new_subcategory
 
 @app.post("/subcategorys/{subcategory_id}/items/", 
-          response_model=ProhibitedItem,
+          response_model=ProhibitedItemCreateResponse,
           status_code=201,
           summary="아이템을 추가하는 API",
           description="서브카테고리 ID와 아이템 정보를 입력받아 아이템을 추가합니다.")
@@ -159,7 +160,12 @@ async def create_prohibited_item(
     db: Session = Depends(get_db)
 ):
     new_item = await insert_prohibited_item(db=db, item=item, subcategory_id=subcategory_id)
-    return new_item
+    return ProhibitedItemCreateResponse(
+        id= new_item.id,
+        item_name= new_item.item_name,
+        image_path = new_item.item_name,
+        search_vector = new_item.search_vector
+    )
 
 @app.post("/items/{item_id}/conditions/", 
           response_model=Condition,
