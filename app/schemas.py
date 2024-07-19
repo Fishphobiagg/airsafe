@@ -1,16 +1,12 @@
-# app/schemas.py
-
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
 
 class ConditionBase(BaseModel):
-    is_international: bool
-    is_domestic: bool
-    cabin: str
-    trust: str
-    condition_description: str
-    reference: Optional[str] = None
+    flight_option_id: int
+    condition: str
+    allowed: bool
+    field_option_id: int
 
 class ConditionCreate(ConditionBase):
     pass
@@ -39,7 +35,12 @@ class ProhibitedItemCreate(BaseModel):
 class ProhibitedItemCreateResponse(ProhibitedItemCreate):
     id: int
 
-class ProhibitedItem(ProhibitedItemBase):
+class ProhibitedItem(BaseModel):
+    id: int
+    item_name: str
+    category: str
+    subcategory: str
+    image_path: Optional[str]
     conditions: List[Condition]
 
     class Config:
@@ -51,7 +52,8 @@ class ProhibitedItemCondition(BaseModel):
     subcategory: str
     item_name: str
     image_path: Optional[str] = None
-    conditions: List[Condition]
+    cabin: dict
+    trust: dict
 
     class Config:
         from_attributes = True
@@ -92,7 +94,8 @@ class Suggestion(SuggestionBase):
     id: int
     created_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
     def to_dict(self):
         data = self.model_dump()

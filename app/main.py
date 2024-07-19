@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, Path, Body, Query
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 
-from app.schemas import ProhibitedItem, ProhibitedItemCreateResponse, SearchResponse,ProhibitedItemBase, ItemNotFound, Suggestion, ProhibitedItemList, SuggestionCreate, Condition, Subcategory, SubcategoryCreate, ProhibitedItemCreate, ConditionCreate, ProhibitedItemCondition
+from app.schemas import ProhibitedItemCreateResponse, SearchResponse,ProhibitedItemBase, ItemNotFound, Suggestion, ProhibitedItemList, SuggestionCreate, Condition, Subcategory, SubcategoryCreate, ProhibitedItemCreate, ConditionCreate, ProhibitedItemCondition
 from app.crud import get_prohibited_item_by_id, get_prohibited_item_by_name, create_search_history, search_prohibited_items, create_suggestion, insert_condition, insert_prohibited_item, insert_subcategory
 from app.database import SessionLocal, init_db
 
@@ -75,19 +75,35 @@ async def get_item_by_id(
     item = get_prohibited_item_by_id(db=db, id=item_id, is_international=is_international, is_domestic=is_domestic)
     if item is None:
         await create_search_history(db, search_term=f"id: {item_id}")
-        return JSONResponse(content=ItemNotFound(message=f"id : {item_id} is not found").model_dump_json(), 
+        return JSONResponse(content=ItemNotFound(message=f"id : {item_id} is not found").model_dump(), 
                             status_code=404, 
                             media_type="application/json")
     await create_search_history(db, search_term=item.item_name, prohibited_item_id=item.id)
-    return ProhibitedItemCondition(
-        id=item.id,
-        category=item.subcategory.category.name,
-        subcategory=item.subcategory.name,
-        item_name=item.item_name,
-        image_path=item.image_path,
-        conditions=item.conditions
-    )
 
+    cabin_conditions = [condition.condition for condition in item.conditions if condition.field_option.option == "cabin"]
+    trust_conditions = [condition.condition for condition in item.conditions if condition.field_option.option == "trust"]
+    
+    cabin_allowed = [condition.allowed for condition in item.conditions if condition.field_option.option == "cabin"]
+    trust_allowed = [condition.allowed for condition in item.conditions if condition.field_option.option == "trust"]
+
+    cabin_status = '△' if True in cabin_allowed and False in cabin_allowed else ('O' if all(c == True for c in cabin_allowed) else 'X')
+    trust_status = '△' if True in trust_allowed and False in trust_allowed else ('O' if all(c == True for c in trust_allowed) else 'X')
+
+    return {
+        "id": item.id,
+        "category": item.subcategory.category.name,
+        "subcategory": item.subcategory.name,
+        "item_name": item.item_name,
+        "image_path": item.image_path,
+        "cabin": {
+            "availability": cabin_status,
+            "condition_description": cabin_conditions
+        },
+        "trust": {
+            "availability": trust_status,
+            "condition_description": trust_conditions
+        }
+    }
 
 @app.get("/items/search/conditions/", 
          response_model=Union[SearchResponse, ItemNotFound],
@@ -104,20 +120,36 @@ async def get_item_by_search_term(
     items = get_prohibited_item_by_name(db=db, name=search_term, is_international=is_international, is_domestic=is_domestic)
     if not items:
         await create_search_history(db, search_term=search_term)
-        return JSONResponse(content=ItemNotFound(message=f"Item : {search_term} is not found").model_dump_json(), 
+        return JSONResponse(content=ItemNotFound(message=f"Item : {search_term} is not found").model_dump(), 
                             status_code=404, 
                             media_type="application/json")
     
     results = []
     for item in items:
-        item_dict = ProhibitedItemCondition(
-            id=item.id,
-            category=item.subcategory.category.name,
-            subcategory=item.subcategory.name,
-            item_name=item.item_name,
-            image_path=item.image_path,
-            conditions=item.conditions
-        )
+        cabin_conditions = [condition.condition for condition in item.conditions if condition.field_option.option == "cabin"]
+        trust_conditions = [condition.condition for condition in item.conditions if condition.field_option.option == "trust"]
+        
+        cabin_allowed = [condition.allowed for condition in item.conditions if condition.field_option.option == "cabin"]
+        trust_allowed = [condition.allowed for condition in item.conditions if condition.field_option.option == "trust"]
+
+        cabin_status = '△' if True in cabin_allowed and False in cabin_allowed else ('O' if all(c == True for c in cabin_allowed) else 'X')
+        trust_status = '△' if True in trust_allowed and False in trust_allowed else ('O' if all(c == True for c in trust_allowed) else 'X')
+
+        item_dict = {
+            "id": item.id,
+            "category": item.subcategory.category.name,
+            "subcategory": item.subcategory.name,
+            "item_name": item.item_name,
+            "image_path": item.image_path,
+            "cabin": {
+                "availability": cabin_status,
+                "condition_description": cabin_conditions
+            },
+            "trust": {
+                "availability": trust_status,
+                "condition_description": trust_conditions
+            }
+        }
         results.append(item_dict)
     await create_search_history(db, search_term=search_term, prohibited_item_id=items[0].id)
     return SearchResponse(search_term=search_term, results=results)
@@ -146,7 +178,6 @@ async def create_subcategory(
     db: Session = Depends(get_db)
 ):
     new_subcategory = await insert_subcategory(db=db, subcategory=subcategory, category_id=category_id)
-    print("여기까지")
     return new_subcategory
 
 @app.post("/subcategorys/{subcategory_id}/items/", 

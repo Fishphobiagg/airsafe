@@ -47,19 +47,34 @@ class ProhibitedItem(Base):
     search_histories = relationship("SearchHistory", back_populates="prohibited_item")
     conditions = relationship("Condition", back_populates="prohibited_item")
 
+
+class FlightOption(Base):
+    __tablename__ = "flight_options"
+    id = Column(BigInteger, primary_key=True, index=True, autoincrement=True)
+    option = Column(String(50), nullable=False)
+
+    conditions = relationship("Condition", back_populates="flight_option")
+
+class FieldOption(Base):
+    __tablename__ = "field_options"
+    id = Column(BigInteger, primary_key=True, index=True, autoincrement=True)
+    option = Column(String(50), nullable=False)
+
+    conditions = relationship("Condition", back_populates="field_option")
+
 class Condition(Base):
     __tablename__ = "conditions"
     id = Column(BigInteger, primary_key=True, index=True, autoincrement=True)
     prohibited_item_id = Column(BigInteger, ForeignKey('prohibited_items.id'))
-    is_international = Column(Boolean, nullable=True)
-    is_domestic = Column(Boolean, nullable=True)
-    cabin = Column(String(1))  # 'O', '△', 'X'
-    trust = Column(String(1))  # 'O', '△', 'X'
-    condition_description = Column(Text)
-    reference = Column(Text, nullable=True)
+    flight_option_id = Column(BigInteger, ForeignKey('flight_options.id'))
+    field_option_id = Column(BigInteger, ForeignKey('field_options.id'))
+    condition = Column(Text, nullable=False)
+    allowed = Column(Boolean, nullable=False)
 
     prohibited_item = relationship("ProhibitedItem", back_populates="conditions")
-
+    flight_option = relationship("FlightOption", back_populates="conditions")
+    field_option = relationship("FieldOption", back_populates="conditions")
+    
 class SearchHistory(Base):
     __tablename__ = "search_history"
     id = Column(BigInteger, primary_key=True, index=True, autoincrement=True)
