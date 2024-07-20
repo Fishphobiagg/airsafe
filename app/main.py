@@ -2,8 +2,8 @@ from fastapi import FastAPI, Depends, Path, Body, Query
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 
-from app.schemas import ProhibitedItemCreateResponse, SearchResponse,ProhibitedItemBase, ItemNotFound, Suggestion, ProhibitedItemList, SuggestionCreate, Condition, Subcategory, SubcategoryCreate, ProhibitedItemCreate, ConditionCreate, ProhibitedItemCondition
-from app.crud import get_prohibited_item_by_id, get_prohibited_item_by_name, create_search_history, search_prohibited_items, create_suggestion, insert_condition, insert_prohibited_item, insert_subcategory
+from app.schemas import SubcategoryWithItemsResponse, SubcategoryDetails, ProhibitedItemCreateResponse, SearchResponse,ProhibitedItemBase, ItemNotFound, Suggestion, ProhibitedItemList, SuggestionCreate, Condition, Subcategory, SubcategoryCreate, ProhibitedItemCreate, ConditionCreate, ProhibitedItemCondition
+from app.crud import search_subcategory_with_items, get_prohibited_item_by_id, get_prohibited_item_by_name, create_search_history, search_prohibited_items, create_suggestion, insert_condition, insert_prohibited_item, insert_subcategory
 from app.database import SessionLocal, init_db
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,7 +33,7 @@ def get_db():
 
 
 @app.get("/items/",
-         response_model=Union[ProhibitedItemList, ItemNotFound],
+         response_model=Union[ProhibitedItemList, SubcategoryWithItemsResponse, ItemNotFound],
          summary="검색어를 통해 자동완성된 검색 결과를 반환하는 api",
          description="입력된 검색어를 통해 자동완성 되는 품목을 반환",
          status_code=200)
@@ -41,6 +41,26 @@ async def search_items(
     search_term: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
+    if search_term is None:
+        return JSONResponse(content=ItemNotFound(message="Search term is required").model_dump(),
+                            status_code=400,
+                            media_type="application/json")
+
+    subcategory, items = search_subcategory_with_items(db, search_term)
+
+    if subcategory:
+        return SubcategoryWithItemsResponse(
+            subcategory=SubcategoryDetails(
+                id=subcategory.id,
+                name=subcategory.name
+            ),
+            items=[ProhibitedItemBase(
+                id=item.id,
+                item_name=item.item_name,
+                category_image=subcategory.category.image
+            ) for item in items]
+        )
+    
     items = search_prohibited_items(db, query=search_term)
     if not items:
         await create_search_history(db, search_term=search_term)
@@ -53,9 +73,6 @@ async def search_items(
         search_result=[ProhibitedItemBase(
             id=item.id,
             item_name=item.item_name,
-            category=item.subcategory.category.name,
-            subcategory=item.subcategory.name,
-            image_path=item.image_path,
             category_image=item.subcategory.category.image
         ) for item in items]
     )

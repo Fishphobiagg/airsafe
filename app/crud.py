@@ -4,6 +4,14 @@ from app.models import ProhibitedItem, SearchHistory, Suggestion, Subcategory, C
 from app.schemas import ProhibitedItemCreate, SuggestionCreate, ConditionCreate, SubcategoryCreate
 import asyncio
 
+
+def search_subcategory_with_items(db: Session, search_term: str):
+    subcategory = db.query(Subcategory).filter(Subcategory.name.ilike(f'%{search_term}%')).first()
+    if subcategory:
+        items = db.query(ProhibitedItem).filter(ProhibitedItem.subcategory_id == subcategory.id).all()
+        return subcategory, items
+    return None, []
+
 async def create_prohibited_item(db: Session, item: ProhibitedItemCreate):
     db_item = ProhibitedItem(**item.model_dump())
     db.add(db_item)
@@ -12,7 +20,7 @@ async def create_prohibited_item(db: Session, item: ProhibitedItemCreate):
     return db_item
 
 def search_prohibited_items(db: Session, query: str):
-    ts_query = func.to_tsquery('pg_catalog.english', f'{query}:*')
+    ts_query = func.plainto_tsquery('pg_catalog.english', query)
     items = db.query(ProhibitedItem).filter(ProhibitedItem.search_vector.op('@@')(ts_query)).all()
 
     for item in items:

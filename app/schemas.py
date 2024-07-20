@@ -20,8 +20,6 @@ class Condition(ConditionBase):
 class ProhibitedItemBase(BaseModel):
     id: int
     item_name: str
-    category: str
-    subcategory: str
     category_image: str
 
 class ProhibitedItemList(BaseModel):
@@ -31,6 +29,16 @@ class ProhibitedItemCreate(BaseModel):
     item_name: str
     image_path: str
     search_vector: str
+
+
+class SubcategoryDetails(BaseModel):
+    id: int
+    name: str
+
+class SubcategoryWithItemsResponse(BaseModel):
+    subcategory: SubcategoryDetails
+    items: List[ProhibitedItemBase]
+
 
 class ProhibitedItemCreateResponse(ProhibitedItemCreate):
     id: int
@@ -60,7 +68,6 @@ class ProhibitedItemCondition(BaseModel):
 
 class SubcategoryBase(BaseModel):
     name: str
-    search_vector: str
 
 class SubcategoryCreate(SubcategoryBase):
     pass
