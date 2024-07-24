@@ -20,12 +20,7 @@ async def create_prohibited_item(db: Session, item: ProhibitedItemCreate):
     return db_item
 
 def search_prohibited_items(db: Session, query: str):
-    ts_query = func.plainto_tsquery('pg_catalog.english', query)
-    items = db.query(ProhibitedItem).filter(ProhibitedItem.search_vector.op('@@')(ts_query)).all()
-
-    for item in items:
-        conditions_query = db.query(Condition).filter(Condition.prohibited_item_id == item.id)
-        item.conditions = conditions_query.all()
+    items = db.query(ProhibitedItem).filter(ProhibitedItem.item_name.ilike(f'{query}%')).all()
     return items
 
 async def create_search_history(db: Session, search_term: str, prohibited_item_id: int = None):

@@ -60,6 +60,7 @@ class ProhibitedItemCondition(BaseModel):
     subcategory: str
     item_name: str
     image_path: Optional[str] = None
+    flight_option: str
     cabin: dict
     trust: dict
 

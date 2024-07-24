@@ -33,7 +33,7 @@ def get_db():
 
 
 @app.get("/items/",
-         response_model=Union[ProhibitedItemList, SubcategoryWithItemsResponse, ItemNotFound],
+         response_model=Union[ProhibitedItemList, ItemNotFound],
          summary="검색어를 통해 자동완성된 검색 결과를 반환하는 api",
          description="입력된 검색어를 통해 자동완성 되는 품목을 반환",
          status_code=200)
@@ -46,21 +46,6 @@ async def search_items(
                             status_code=400,
                             media_type="application/json")
 
-    subcategory, items = search_subcategory_with_items(db, search_term)
-
-    if subcategory:
-        return SubcategoryWithItemsResponse(
-            subcategory=SubcategoryDetails(
-                id=subcategory.id,
-                name=subcategory.name
-            ),
-            items=[ProhibitedItemBase(
-                id=item.id,
-                item_name=item.item_name,
-                category_image=subcategory.category.image
-            ) for item in items]
-        )
-    
     items = search_prohibited_items(db, query=search_term)
     if not items:
         await create_search_history(db, search_term=search_term)
@@ -112,6 +97,7 @@ async def get_item_by_id(
         "subcategory": item.subcategory.name,
         "item_name": item.item_name,
         "image_path": item.image_path,
+        "flight_option": item.conditions[0].flight_option.option,
         "cabin": {
             "availability": cabin_status,
             "condition_description": cabin_conditions
@@ -158,6 +144,7 @@ async def get_item_by_search_term(
             "subcategory": item.subcategory.name,
             "item_name": item.item_name,
             "image_path": item.image_path,
+            "flight_option": item.conditions[0].flight_option.option,
             "cabin": {
                 "availability": cabin_status,
                 "condition_description": cabin_conditions
