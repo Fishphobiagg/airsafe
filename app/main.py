@@ -70,7 +70,7 @@ async def search_items(
 
     await create_search_history(db, search_term=search_term)
     return ProhibitedItemList(
-        search_result=[ProhibitedItemBase(
+        items=[ProhibitedItemBase(
             id=item.id,
             item_name=item.item_name,
             category_image=item.subcategory.category.image
@@ -169,7 +169,7 @@ async def get_item_by_search_term(
         }
         results.append(item_dict)
     await create_search_history(db, search_term=search_term, prohibited_item_id=items[0].id)
-    return SearchResponse(search_term=search_term, results=results)
+    return SearchResponse(search_term=search_term, items=results)
 
 @app.post("/suggestions/", 
           response_model=Suggestion,

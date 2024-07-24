@@ -23,7 +23,7 @@ class ProhibitedItemBase(BaseModel):
     category_image: str
 
 class ProhibitedItemList(BaseModel):
-    search_result: List[ProhibitedItemBase]
+    items: List[ProhibitedItemBase]
 
 class ProhibitedItemCreate(BaseModel):
     item_name: str
@@ -80,7 +80,7 @@ class Subcategory(SubcategoryBase):
 
 class SearchResponse(BaseModel):
     search_term: str
-    results: List[ProhibitedItemCondition] = []
+    items: List[ProhibitedItemCondition] = []
 
     class Config:
         from_attributes = True
