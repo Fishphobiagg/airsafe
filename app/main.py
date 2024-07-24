@@ -2,13 +2,13 @@ from fastapi import FastAPI, Depends, Path, Body, Query
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 
-from app.schemas import SubcategoryWithItemsResponse, SubcategoryDetails, ProhibitedItemCreateResponse, SearchResponse,ProhibitedItemBase, ItemNotFound, Suggestion, ProhibitedItemList, SuggestionCreate, Condition, Subcategory, SubcategoryCreate, ProhibitedItemCreate, ConditionCreate, ProhibitedItemCondition
-from app.crud import search_subcategory_with_items, get_prohibited_item_by_id, get_prohibited_item_by_name, create_search_history, search_prohibited_items, create_suggestion, insert_condition, insert_prohibited_item, insert_subcategory
+from app.schemas import SearchHistoryResponse, ProhibitedItemCreateResponse, SearchResponse,ProhibitedItemBase, ItemNotFound, Suggestion, ProhibitedItemList, SuggestionCreate, Condition, Subcategory, SubcategoryCreate, ProhibitedItemCreate, ConditionCreate, ProhibitedItemCondition
+from app.crud import get_top_search_histories, get_prohibited_item_by_id, get_prohibited_item_by_name, create_search_history, search_prohibited_items, create_suggestion, insert_condition, insert_prohibited_item, insert_subcategory
 from app.database import SessionLocal, init_db
 
 from fastapi.middleware.cors import CORSMiddleware
 
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 init_db()
 
@@ -214,3 +214,18 @@ async def create_condition(
 ):
     new_condition = await insert_condition(db=db, prohibited_item_id=item_id, condition=condition)
     return new_condition
+
+@app.get("/search_history", 
+         response_model=List[SearchHistoryResponse], 
+         summary="검색 기록을 횟수 순으로 반환하는 API",
+         description="ID가 있는 검색 기록 중 검색 횟수가 많은 순서대로 입력받은 수 만큼 반환합니다.",
+         status_code=200)
+async def get_search_history(
+    limit: int = Query(10, description="출력할 검색어 수", ge=1),
+    db: Session = Depends(get_db)
+):
+    search_histories = get_top_search_histories(db=db, limit=limit)
+    return [SearchHistoryResponse(
+        search_term=history.search_term,
+        prohibited_item_id=history.prohibited_item_id
+    ) for history in search_histories]

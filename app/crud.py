@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func, or_
-from app.models import ProhibitedItem, SearchHistory, Suggestion, Subcategory, Condition, FlightOption, FieldOption
+from app.models import SearchHistory, ProhibitedItem, SearchHistory, Suggestion, Subcategory, Condition, FlightOption, FieldOption
 from app.schemas import ProhibitedItemCreate, SuggestionCreate, ConditionCreate, SubcategoryCreate
 import asyncio
-
+from typing import List
 
 def search_subcategory_with_items(db: Session, search_term: str):
     subcategory = db.query(Subcategory).filter(Subcategory.name.ilike(f'%{search_term}%')).first()
@@ -98,3 +98,10 @@ async def insert_condition(db: Session, prohibited_item_id: int, condition: Cond
     await asyncio.to_thread(db.commit)
     await asyncio.to_thread(db.refresh, db_condition)
     return db_condition
+
+def get_top_search_histories(db: Session, limit: int) -> List[SearchHistory]:
+    return db.query(SearchHistory)\
+             .filter(SearchHistory.prohibited_item_id.isnot(None))\
+             .order_by(SearchHistory.search_count.desc())\
+             .limit(limit)\
+             .all()

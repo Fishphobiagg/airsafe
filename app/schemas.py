@@ -109,3 +109,7 @@ class Suggestion(SuggestionBase):
         data = self.model_dump()
         data['created_at'] = self.created_at.isoformat()
         return data
+    
+class SearchHistoryResponse(BaseModel):
+    prohibited_item_id: int
+    search_term: str
