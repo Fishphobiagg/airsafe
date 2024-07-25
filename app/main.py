@@ -254,13 +254,15 @@ async def get_search_history(
 @app.post("/categories/{category_id}/subcategories/")
 async def create_subcategory(
     category_id: int = Path(...),
-    name: str = Form(...),
+    name: str = Query(...),
     db: Session = Depends(get_db)
 ):
     new_subcategory = SubcategoryCreate(
         name=name,
         category_id=category_id,
     )
+
+    
 
     await insert_subcategory(db, new_subcategory)
 

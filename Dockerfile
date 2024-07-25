@@ -10,7 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the application code
 COPY app ./app
-
+COPY app ./static
 # Copy config.yml to the root directory
 COPY config.yml .
 
