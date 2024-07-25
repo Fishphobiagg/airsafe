@@ -29,7 +29,6 @@ class Subcategory(Base):
     id = Column(BigInteger, primary_key=True, index=True, autoincrement=True)
     category_id = Column(BigInteger, ForeignKey('category.id'))
     name = Column(String(50), index=True)
-    search_vector = Column(TSVector, nullable=False)
     
     category = relationship("Category", back_populates="subcategories")
     prohibited_items = relationship("ProhibitedItem", back_populates="subcategory")

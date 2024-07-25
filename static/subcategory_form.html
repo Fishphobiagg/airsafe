@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>소분류 생성기</title>
+    <script>
+        async function fetchCategories() {
+            const response = await fetch('/categories/');
+            return response.json();
+        }
+
+        async function populateCategoryOptions() {
+            const categories = await fetchCategories();
+            const categorySelect = document.getElementById('category_id');
+
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.id;
+                option.text = category.name;
+                categorySelect.appendChild(option);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', populateCategoryOptions);
+
+        async function submitForm(event) {
+            event.preventDefault();
+            const form = event.target;
+            const categoryId = form.category_id.value;
+            const name = form.name.value;
+
+            const formData = new FormData();
+            formData.append('name', name);
+
+            const response = await fetch(`/categories/${categoryId}/subcategories/`, {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (response.ok) {
+                alert('소분류가 성공적으로 생성되었습니다.');
+            } else {
+                const errorData = await response.json();
+                alert('소분류 생성에 실패했습니다: ' + JSON.stringify(errorData));
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>소분류 생성</h1>
+    <form id="subcategory-form" onsubmit="setFormAction()" method="post">
+
+        <label for="category_id">대분류:</label><br>
+        <select id="category_id" name="category_id" onchange="setFormAction()" style="margin-bottom:5px;"></select><br><br>
+
+        <label for="name">소분류 명:</label><br>
+        <input type="text" id="name" name="name" style="margin-bottom:5px;"><br>
+
+        <input type="submit" value="소분류 생성" style="margin-top:5px;">
+    </form>
+</body>
+</html>

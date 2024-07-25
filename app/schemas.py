@@ -25,11 +25,17 @@ class ProhibitedItemBase(BaseModel):
 class ProhibitedItemList(BaseModel):
     items: List[ProhibitedItemBase]
 
+class ConditionCreate(BaseModel):
+    condition: str
+    allowed: bool
+    flight_option_id: int
+    field_option_id: int
+
 class ProhibitedItemCreate(BaseModel):
     item_name: str
     image_path: str
-    search_vector: str
-
+    subcategory_id: int
+    conditions: List[ConditionCreate]
 
 class SubcategoryDetails(BaseModel):
     id: int
@@ -39,9 +45,9 @@ class SubcategoryWithItemsResponse(BaseModel):
     subcategory: SubcategoryDetails
     items: List[ProhibitedItemBase]
 
-
-class ProhibitedItemCreateResponse(ProhibitedItemCreate):
-    id: int
+class SubcategoryCreate(BaseModel):
+    name: str
+    category_id: int
 
 class ProhibitedItem(BaseModel):
     id: int
@@ -68,13 +74,33 @@ class ProhibitedItemCondition(BaseModel):
         from_attributes = True
 
 class SubcategoryBase(BaseModel):
+    id: int
     name: str
-
-class SubcategoryCreate(SubcategoryBase):
-    pass
 
 class Subcategory(SubcategoryBase):
     id: int
+    name: str
+
+    class Config:
+        from_attributes = True
+
+class Category(BaseModel):
+    id: int
+    name:str
+
+    class Config:
+        from_attributes = True
+
+class FieldOption(BaseModel):
+    id: int
+    option: str
+
+    class Config:
+        from_attributes = True
+
+class FlightOption(BaseModel):
+    id: int
+    option: str
 
     class Config:
         from_attributes = True

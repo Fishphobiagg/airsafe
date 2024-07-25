@@ -1,10 +1,12 @@
-from fastapi import FastAPI, Depends, Path, Body, Query
+from fastapi import FastAPI, Depends, Path, Request, Query, Form
 from sqlalchemy.orm import Session
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 
-from app.schemas import SearchHistoryResponse, ProhibitedItemCreateResponse, SearchResponse,ProhibitedItemBase, ItemNotFound, Suggestion, ProhibitedItemList, SuggestionCreate, Condition, Subcategory, SubcategoryCreate, ProhibitedItemCreate, ConditionCreate, ProhibitedItemCondition
-from app.crud import get_top_search_histories, get_prohibited_item_by_id, get_prohibited_item_by_name, create_search_history, search_prohibited_items, create_suggestion, insert_condition, insert_prohibited_item, insert_subcategory
+from app.schemas import SearchHistoryResponse, SubcategoryCreate, SearchResponse,ProhibitedItemBase, ItemNotFound, Suggestion, ProhibitedItemList, SuggestionCreate, Subcategory, SubcategoryCreate, ProhibitedItemCreate, ConditionCreate, ProhibitedItemCondition, Category, FieldOption, FlightOption
+from app.crud import create_prohibited_item_with_conditions, get_top_search_histories, get_prohibited_item_by_id, get_prohibited_item_by_name, create_search_history, search_prohibited_items, create_suggestion, insert_subcategory, get_categories, get_field_options, get_flight_options, get_subcategories
 from app.database import SessionLocal, init_db
+
+from fastapi.staticfiles import StaticFiles
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -13,6 +15,8 @@ from typing import Optional, Union, List
 init_db()
 
 app = FastAPI(swagger_ui_parameters={"syntaxHighlight.theme": "obsidian"})
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 origins = ["*"]
 
@@ -31,6 +35,16 @@ def get_db():
     finally:
         db.close()
 
+
+@app.get("/", response_class=HTMLResponse)
+async def get_form():
+    with open("static/form.html") as f:
+        return HTMLResponse(content=f.read())
+
+@app.get("/create_subcategory/", response_class=HTMLResponse)
+async def get_subcategory_form():
+    with open("static/subcategory_form.html") as f:
+        return HTMLResponse(content=f.read())
 
 @app.get("/items/",
          response_model=Union[ProhibitedItemList, ItemNotFound],
@@ -61,6 +75,44 @@ async def search_items(
             category_image=item.subcategory.category.image
         ) for item in items]
     )
+
+@app.post("/subcategories/{subcategory_id}/items/")
+async def create_item_with_conditions(
+    request: Request,
+    subcategory_id: int = Path(...),
+    item_name: str = Form(...),
+    image_path: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    form = await request.form()
+    conditions = []
+
+    for key in form:
+        if key.startswith("condition_"):
+            index = key.split("_")[1]
+            condition_text = form.get(f"condition_{index}")
+            allowed = form.get(f"allowed_{index}") == "true"
+            flight_option_id = int(form.get(f"flight_option_id_{index}"))
+            field_option_id = int(form.get(f"field_option_id_{index}"))
+
+            condition = ConditionCreate(
+                condition=condition_text,
+                allowed=allowed,
+                flight_option_id=flight_option_id,
+                field_option_id=field_option_id
+            )
+            conditions.append(condition)
+
+    new_item = ProhibitedItemCreate(
+        item_name=item_name,
+        image_path=image_path,
+        subcategory_id=subcategory_id,
+        conditions=conditions
+    )
+
+    await create_prohibited_item_with_conditions(db, new_item)
+
+    return {"message": "Item with conditions created successfully"}
 
 @app.get("/items/{item_id}/", 
          response_model=Union[ProhibitedItemCondition, ItemNotFound],
@@ -184,37 +236,6 @@ async def create_subcategory(
     new_subcategory = await insert_subcategory(db=db, subcategory=subcategory, category_id=category_id)
     return new_subcategory
 
-@app.post("/subcategorys/{subcategory_id}/items/", 
-          response_model=ProhibitedItemCreateResponse,
-          status_code=201,
-          summary="아이템을 추가하는 API",
-          description="서브카테고리 ID와 아이템 정보를 입력받아 아이템을 추가합니다.")
-async def create_prohibited_item(
-    subcategory_id: int = Path(..., description="서브카테고리 ID"),
-    item: ProhibitedItemCreate = Body(...),
-    db: Session = Depends(get_db)
-):
-    new_item = await insert_prohibited_item(db=db, item=item, subcategory_id=subcategory_id)
-    return ProhibitedItemCreateResponse(
-        id= new_item.id,
-        item_name= new_item.item_name,
-        image_path = new_item.item_name,
-        search_vector = new_item.search_vector
-    )
-
-@app.post("/items/{item_id}/conditions/", 
-          response_model=Condition,
-          status_code=201,
-          summary="조건을 추가하는 API",
-          description="아이템 ID와 조건 정보를 입력받아 조건을 추가합니다.")
-async def create_condition(
-    item_id: int = Path(..., description="아이템 id"),
-    condition: ConditionCreate= Body(...),
-    db: Session = Depends(get_db)
-):
-    new_condition = await insert_condition(db=db, prohibited_item_id=item_id, condition=condition)
-    return new_condition
-
 @app.get("/search_history", 
          response_model=List[SearchHistoryResponse], 
          summary="검색 기록을 횟수 순으로 반환하는 API",
@@ -229,3 +250,38 @@ async def get_search_history(
         search_term=history.search_term,
         prohibited_item_id=history.prohibited_item_id
     ) for history in search_histories]
+
+@app.post("/categories/{category_id}/subcategories/")
+async def create_subcategory(
+    category_id: int = Path(...),
+    name: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    new_subcategory = SubcategoryCreate(
+        name=name,
+        category_id=category_id,
+    )
+
+    await insert_subcategory(db, new_subcategory)
+
+    return {"message": "성공적으로 생성되었습니다"}
+
+@app.get("/categories/", response_model=List[Category])
+async def read_categories(db: Session = Depends(get_db)):
+    categories = get_categories(db)
+    return categories
+
+@app.get("/subcategories/", response_model=List[Subcategory])
+async def read_subcategories(db: Session = Depends(get_db)):
+    subcategories = get_subcategories(db)
+    return subcategories
+
+@app.get("/flight_options/", response_model=List[FlightOption])
+async def read_flight_options(db: Session = Depends(get_db)):
+    flight_options = get_flight_options(db)
+    return flight_options
+
+@app.get("/field_options/", response_model=List[FieldOption])
+async def read_field_options(db: Session = Depends(get_db)):
+    field_options = get_field_options(db)
+    return field_options

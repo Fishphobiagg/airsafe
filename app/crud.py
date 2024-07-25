@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func, or_
-from app.models import SearchHistory, ProhibitedItem, SearchHistory, Suggestion, Subcategory, Condition, FlightOption, FieldOption
+from app.models import Category, SearchHistory, ProhibitedItem, SearchHistory, Suggestion, Subcategory, Condition, FlightOption, FieldOption
 from app.schemas import ProhibitedItemCreate, SuggestionCreate, ConditionCreate, SubcategoryCreate
 import asyncio
 from typing import List
@@ -85,23 +85,47 @@ async def insert_subcategory(db: Session, subcategory: SubcategoryCreate, catego
     await asyncio.to_thread(db.refresh, db_subcategory)
     return db_subcategory
 
-async def insert_prohibited_item(db: Session, item: ProhibitedItemCreate, subcategory_id: int):
-    db_item = ProhibitedItem(subcategory_id=subcategory_id, **item.model_dump())
-    db.add(db_item)
-    await asyncio.to_thread(db.commit)
-    await asyncio.to_thread(db.refresh, db_item)
-    return db_item
-
-async def insert_condition(db: Session, prohibited_item_id: int, condition: ConditionCreate):
-    db_condition = Condition(prohibited_item_id=prohibited_item_id, **condition.model_dump())
-    db.add(db_condition)
-    await asyncio.to_thread(db.commit)
-    await asyncio.to_thread(db.refresh, db_condition)
-    return db_condition
-
 def get_top_search_histories(db: Session, limit: int) -> List[SearchHistory]:
     return db.query(SearchHistory)\
              .filter(SearchHistory.prohibited_item_id.isnot(None))\
              .order_by(SearchHistory.search_count.desc())\
              .limit(limit)\
              .all()
+
+def get_categories(db: Session) -> List[Category]:
+    return db.query(Category)\
+            .all()
+
+def get_subcategories(db: Session) -> List[Subcategory]:
+    return db.query(Subcategory)\
+            .all()
+
+def get_flight_options(db: Session) -> List[FlightOption]:
+    return db.query(FlightOption)\
+            .all()
+
+def get_field_options(db: Session) -> List[FieldOption]:
+    return db.query(FieldOption)\
+            .all()
+    
+def create_prohibited_item_with_conditions(db: Session, item: ProhibitedItemCreate):
+    new_item = ProhibitedItem(
+        item_name=item.item_name,
+        image_path=item.image_path,
+        subcategory_id=item.subcategory_id
+    )
+    db.add(new_item)
+    db.commit()
+    db.refresh(new_item)
+    
+    for condition in item.conditions:
+        db_condition = Condition(
+            prohibited_item_id=new_item.id,
+            flight_option_id=condition.flight_option_id,
+            field_option_id=condition.field_option_id,
+            condition=condition.condition,
+            allowed=condition.allowed
+        )
+        db.add(db_condition)
+    
+    db.commit()
