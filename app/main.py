@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse, HTMLResponse
 
 from app.schemas import SearchHistoryResponse, SubcategoryCreate, SearchResponse,ProhibitedItemBase, ItemNotFound, Suggestion, ProhibitedItemList, SuggestionCreate, Subcategory, SubcategoryCreate, ProhibitedItemCreate, ConditionCreate, ProhibitedItemCondition, Category, FieldOption, FlightOption
-from app.crud import create_prohibited_item_with_conditions, get_top_search_histories, get_prohibited_item_by_id, get_prohibited_item_by_name, create_search_history, search_prohibited_items, create_suggestion, insert_subcategory, get_categories, get_field_options, get_flight_options, get_subcategories
+from app.crud import create_prohibited_item_with_conditions, get_top_search_histories, get_prohibited_item_by_id, get_condition_by_name, create_search_history, search_prohibited_items, create_suggestion, insert_subcategory, get_categories, get_field_options, get_flight_options, get_subcategories
 from app.database import SessionLocal, init_db
 
 from fastapi.staticfiles import StaticFiles
@@ -172,25 +172,25 @@ async def get_item_by_search_term(
     is_domestic: Optional[bool] = Query(None),
     db: Session = Depends(get_db)
 ):
-    items = get_prohibited_item_by_name(db=db, name=search_term, is_international=is_international, is_domestic=is_domestic)
-    if not items:
+    print(111)
+    item = get_condition_by_name(db=db, name=search_term, is_international=is_international, is_domestic=is_domestic)
+    if not item:
         await create_search_history(db, search_term=search_term)
         return JSONResponse(content=ItemNotFound(message=f"Item : {search_term} is not found").model_dump(), 
                             status_code=404, 
                             media_type="application/json")
     
-    results = []
-    for item in items:
-        cabin_conditions = [condition.condition for condition in item.conditions if condition.field_option.option == "cabin"]
-        trust_conditions = [condition.condition for condition in item.conditions if condition.field_option.option == "trust"]
+
+    cabin_conditions = [condition.condition for condition in item.conditions if condition.field_option.option == "cabin"]
+    trust_conditions = [condition.condition for condition in item.conditions if condition.field_option.option == "trust"]
         
-        cabin_allowed = [condition.allowed for condition in item.conditions if condition.field_option.option == "cabin"]
-        trust_allowed = [condition.allowed for condition in item.conditions if condition.field_option.option == "trust"]
+    cabin_allowed = [condition.allowed for condition in item.conditions if condition.field_option.option == "cabin"]
+    trust_allowed = [condition.allowed for condition in item.conditions if condition.field_option.option == "trust"]
 
-        cabin_status = '△' if True in cabin_allowed and False in cabin_allowed else ('O' if all(c == True for c in cabin_allowed) else 'X')
-        trust_status = '△' if True in trust_allowed and False in trust_allowed else ('O' if all(c == True for c in trust_allowed) else 'X')
-
-        item_dict = {
+    cabin_status = '△' if True in cabin_allowed and False in cabin_allowed else ('O' if all(c == True for c in cabin_allowed) else 'X')
+    trust_status = '△' if True in trust_allowed and False in trust_allowed else ('O' if all(c == True for c in trust_allowed) else 'X')
+    
+    item_dict = {
             "id": item.id,
             "category": item.subcategory.category.name,
             "subcategory": item.subcategory.name,
@@ -206,9 +206,9 @@ async def get_item_by_search_term(
                 "condition_description": trust_conditions
             }
         }
-        results.append(item_dict)
-    await create_search_history(db, search_term=search_term, prohibited_item_id=items[0].id)
-    return SearchResponse(search_term=search_term, items=results)
+    
+    await create_search_history(db, search_term=search_term, prohibited_item_id=item.id)
+    return SearchResponse(search_term=search_term, items=[item_dict])
 
 @app.post("/suggestions/", 
           response_model=Suggestion,

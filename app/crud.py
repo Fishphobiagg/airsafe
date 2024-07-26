@@ -50,7 +50,6 @@ def get_item_conditions(db: Session, prohibited_item_id: int, is_international: 
 
     conditions = db.query(Condition).filter(Condition.prohibited_item_id == prohibited_item_id).filter(
         or_(Condition.flight_option_id.in_(flight_option_ids), len(flight_option_ids) == 0)).all()
-
     return conditions
 
 def get_prohibited_item_by_id(db: Session, id: int, is_international: bool = None, is_domestic: bool = None) -> ProhibitedItem:
@@ -59,17 +58,11 @@ def get_prohibited_item_by_id(db: Session, id: int, is_international: bool = Non
         item.conditions = get_item_conditions(db, item.id, is_international, is_domestic)
     return item
 
-def get_prohibited_item_by_name(db: Session, name: str, is_international: bool = None, is_domestic: bool = None):
-    subcategory_query = db.query(Subcategory).filter(Subcategory.name == name).first()
-    items = []
-    if subcategory_query:
-        items = db.query(ProhibitedItem).filter(ProhibitedItem.subcategory_id == subcategory_query.id).all()
-    else:
-        items = db.query(ProhibitedItem).filter(func.to_tsvector('english', ProhibitedItem.item_name).match(name)).all()
-
-    for item in items:
-        item.conditions = get_item_conditions(db, item.id, is_international, is_domestic)
-    return items
+def get_condition_by_name(db: Session, name: str, is_international: bool = None, is_domestic: bool = None):
+    item = db.query(ProhibitedItem).filter(ProhibitedItem.item_name.ilike(f'%{name}%')).first()
+    if item:
+        item.conditions = get_item_conditions(db, item.id, is_international=is_international, is_domestic=is_domestic)
+    return item
 
 async def create_suggestion(db: Session, suggestion: SuggestionCreate):
     db_suggestion = Suggestion(**suggestion.model_dump())
