@@ -23,26 +23,25 @@
         document.addEventListener('DOMContentLoaded', populateCategoryOptions);
 
         async function submitForm(event) {
-            event.preventDefault();
-            const form = document.getElementById('subcategory-form');
-            const categoryId = document.getElementById('category_id').value;
-            const name = document.getElementById('name').value;
-            
-            const response = await fetch(`/categories/${categoryId}/subcategories/?name=${encodeURIComponent(name)}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({})
-            });
+    event.preventDefault();  // Prevent default form submission
+    const categoryId = document.getElementById('category_id').value;
+    const name = document.getElementById('name').value;
 
-            if (response.ok) {
-                alert('소분류가 성공적으로 생성되었습니다.');
-            } else {
-                const errorData = await response.json();
-                alert('소분류 생성에 실패했습니다: ' + JSON.stringify(errorData));
-            }
-        }
+    const response = await fetch('/subcategories/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name: name, category_id: categoryId })
+    });
+
+    if (response.ok) {
+        alert('소분류가 성공적으로 생성되었습니다.');
+    } else {
+        const errorData = await response.json();
+        alert('소분류 생성에 실패했습니다: ' + JSON.stringify(errorData));
+    }
+}        
 
     </script>
 </head>

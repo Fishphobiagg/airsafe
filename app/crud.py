@@ -43,10 +43,14 @@ def get_flight_option_id(db: Session, option_name: str):
 
 def get_item_conditions(db: Session, prohibited_item_id: int, is_international: bool = None, is_domestic: bool = None):
     flight_option_ids = []
+
+    international_id:int = 1
+    domestic_id:int = 2
+    
     if is_international:
-        flight_option_ids.append(1)  # 국제선
+        flight_option_ids.append(international_id)  # 국제선
     if is_domestic:
-        flight_option_ids.append(2)  # 국내선
+        flight_option_ids.append(domestic_id)  # 국내선
 
     conditions = db.query(Condition).filter(Condition.prohibited_item_id == prohibited_item_id).filter(
         or_(Condition.flight_option_id.in_(flight_option_ids), len(flight_option_ids) == 0)).all()
@@ -71,8 +75,8 @@ async def create_suggestion(db: Session, suggestion: SuggestionCreate):
     await asyncio.to_thread(db.refresh, db_suggestion)
     return db_suggestion
 
-async def insert_subcategory(db: Session, subcategory: SubcategoryCreate, category_id: int):
-    db_subcategory = Subcategory(category_id=category_id, **subcategory.model_dump())
+async def insert_subcategory(db: Session, subcategory: SubcategoryCreate):
+    db_subcategory = Subcategory(**subcategory.model_dump())
     db.add(db_subcategory)
     await asyncio.to_thread(db.commit)
     await asyncio.to_thread(db.refresh, db_subcategory)

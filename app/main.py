@@ -172,7 +172,6 @@ async def get_item_by_search_term(
     is_domestic: Optional[bool] = Query(None),
     db: Session = Depends(get_db)
 ):
-    print(111)
     item = get_condition_by_name(db=db, name=search_term, is_international=is_international, is_domestic=is_domestic)
     if not item:
         await create_search_history(db, search_term=search_term)
@@ -251,20 +250,13 @@ async def get_search_history(
         prohibited_item_id=history.prohibited_item_id
     ) for history in search_histories]
 
-@app.post("/categories/{category_id}/subcategories/")
+@app.post("/subcategories/")
 async def create_subcategory(
-    category_id: int = Path(...),
-    name: str = Query(...),
+    subcategory: SubcategoryCreate,
     db: Session = Depends(get_db)
 ):
-    new_subcategory = SubcategoryCreate(
-        name=name,
-        category_id=category_id,
-    )
 
-    
-
-    await insert_subcategory(db, new_subcategory)
+    await insert_subcategory(db, subcategory=subcategory)
 
     return {"message": "성공적으로 생성되었습니다"}
 
