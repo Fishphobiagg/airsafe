@@ -1,3 +1,4 @@
+-- SQLBook: Code
 -- Category 테이블 생성
 CREATE TABLE category (
     id BIGINT PRIMARY KEY,

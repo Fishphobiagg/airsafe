@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse, HTMLResponse
 
 from app.schemas import SearchHistoryResponse, SubcategoryCreate, SearchResponse,ProhibitedItemBase, ItemNotFound, Suggestion, ProhibitedItemList, SuggestionCreate, Subcategory, SubcategoryCreate, ProhibitedItemCreate, ConditionCreate, ProhibitedItemCondition, Category, FieldOption, FlightOption
-from app.crud import create_prohibited_item_with_conditions, get_top_search_histories, get_prohibited_item_by_id, get_condition_by_name, create_search_history, search_prohibited_items, create_suggestion, insert_subcategory, get_categories, get_field_options, get_flight_options, get_subcategories
+from app.crud import get_item_conditions, create_prohibited_item_with_conditions, get_top_search_histories, get_prohibited_item_by_id, get_condition_by_name, create_search_history, search_prohibited_items, create_suggestion, insert_subcategory, get_categories, get_field_options, get_flight_options, get_subcategories
 from app.database import SessionLocal, init_db
 
 from fastapi.staticfiles import StaticFiles
@@ -126,30 +126,34 @@ async def get_item_by_id(
     is_domestic: Optional[bool] = Query(None),
     db: Session = Depends(get_db)
 ):
-    item = get_prohibited_item_by_id(db=db, id=item_id, is_international=is_international, is_domestic=is_domestic)
+    item = get_prohibited_item_by_id(db=db, id=item_id)
     if item is None:
         await create_search_history(db, search_term=f"id: {item_id}")
         return JSONResponse(content=ItemNotFound(message=f"id : {item_id} is not found").model_dump(), 
                             status_code=404, 
                             media_type="application/json")
+    
     await create_search_history(db, search_term=item.item_name, prohibited_item_id=item.id)
 
-    cabin_conditions = [condition.condition for condition in item.conditions if condition.field_option.option == "cabin"]
-    trust_conditions = [condition.condition for condition in item.conditions if condition.field_option.option == "trust"]
+    # 조건을 조회
+    conditions = get_item_conditions(db, item.id, is_international, is_domestic)
+
+    cabin_conditions = [condition.condition for condition in conditions if condition.field_option.option == "cabin"]
+    trust_conditions = [condition.condition for condition in conditions if condition.field_option.option == "trust"]
     
-    cabin_allowed = [condition.allowed for condition in item.conditions if condition.field_option.option == "cabin"]
-    trust_allowed = [condition.allowed for condition in item.conditions if condition.field_option.option == "trust"]
+    cabin_allowed = [condition.allowed for condition in conditions if condition.field_option.option == "cabin"]
+    trust_allowed = [condition.allowed for condition in conditions if condition.field_option.option == "trust"]
 
     cabin_status = '△' if True in cabin_allowed and False in cabin_allowed else ('O' if all(c == True for c in cabin_allowed) else 'X')
     trust_status = '△' if True in trust_allowed and False in trust_allowed else ('O' if all(c == True for c in trust_allowed) else 'X')
 
-    return {
+    result = {
         "id": item.id,
         "category": item.subcategory.category.name,
         "subcategory": item.subcategory.name,
         "item_name": item.item_name,
         "image_path": item.image_path,
-        "flight_option": item.conditions[0].flight_option.option,
+        "flight_option": conditions[0].flight_option.option if conditions else None,
         "cabin": {
             "availability": cabin_status,
             "condition_description": cabin_conditions
@@ -159,6 +163,8 @@ async def get_item_by_id(
             "condition_description": trust_conditions
         }
     }
+
+    return result
 
 @app.get("/items/search/conditions/", 
          response_model=Union[SearchResponse, ItemNotFound],
@@ -195,7 +201,7 @@ async def get_item_by_search_term(
             "subcategory": item.subcategory.name,
             "item_name": item.item_name,
             "image_path": item.image_path,
-            "flight_option": item.conditions[0].flight_option.option,
+            "flight_option": item.conditions.flight_option.option,
             "cabin": {
                 "availability": cabin_status,
                 "condition_description": cabin_conditions

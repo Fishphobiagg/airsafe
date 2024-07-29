@@ -44,23 +44,30 @@ def get_flight_option_id(db: Session, option_name: str):
 def get_item_conditions(db: Session, prohibited_item_id: int, is_international: bool = None, is_domestic: bool = None):
     flight_option_ids = []
 
-    international_id:int = 1
-    domestic_id:int = 2
+    international_id = 1  # 국제선 ID
+    domestic_id = 2       # 국내선 ID
     
     if is_international:
         flight_option_ids.append(international_id)  # 국제선
     if is_domestic:
         flight_option_ids.append(domestic_id)  # 국내선
 
-    conditions = db.query(Condition).filter(Condition.prohibited_item_id == prohibited_item_id).filter(
-        or_(Condition.flight_option_id.in_(flight_option_ids), len(flight_option_ids) == 0)).all()
+    if len(flight_option_ids) > 0:
+        conditions = db.query(Condition).filter(
+            Condition.prohibited_item_id == prohibited_item_id,
+            Condition.flight_option_id.in_(flight_option_ids)
+        ).all()
+    else:
+        conditions = db.query(Condition).filter(
+            Condition.prohibited_item_id == prohibited_item_id
+        ).all()
+    
     return conditions
 
-def get_prohibited_item_by_id(db: Session, id: int, is_international: bool = None, is_domestic: bool = None) -> ProhibitedItem:
+def get_prohibited_item_by_id(db: Session, id: int) -> ProhibitedItem:
     item = db.query(ProhibitedItem).filter(ProhibitedItem.id == id).first()
-    if item:
-        item.conditions = get_item_conditions(db, item.id, is_international, is_domestic)
     return item
+
 
 def get_condition_by_name(db: Session, name: str, is_international: bool = None, is_domestic: bool = None):
     item = db.query(ProhibitedItem).filter(ProhibitedItem.item_name == {name}).first()

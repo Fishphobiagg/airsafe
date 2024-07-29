@@ -1,61 +1,64 @@
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <title>아이템 생성기</title>
     <script>
-        async function fetchOptions(endpoint) {
-            const response = await fetch(endpoint);
-            return response.json();
-        }
+      async function fetchOptions(endpoint) {
+        const response = await fetch(endpoint);
+        return response.json();
+      }
 
-        async function populateOptions() {
-            const categories = await fetchOptions('/categories/');
-            const subcategories = await fetchOptions('/subcategories/');
-            const flightOptions = await fetchOptions('/flight_options/');
-            const fieldOptions = await fetchOptions('/field_options/');
+      async function populateOptions() {
+        const categories = await fetchOptions("/categories/");
+        const subcategories = await fetchOptions("/subcategories/");
+        const flightOptions = await fetchOptions("/flight_options/");
+        const fieldOptions = await fetchOptions("/field_options/");
 
-            const categorySelect = document.getElementById('category_id');
-            categories.forEach(category => {
-                const option = document.createElement('option');
-                option.value = category.id;
-                option.text = category.name;
-                categorySelect.appendChild(option);
-            });
+        const categorySelect = document.getElementById("category_id");
+        categories.forEach((category) => {
+          const option = document.createElement("option");
+          option.value = category.id;
+          option.text = category.name;
+          categorySelect.appendChild(option);
+        });
 
-            const subcategorySelect = document.getElementById('subcategory_id');
-            subcategories.forEach(subcategory => {
-                const option = document.createElement('option');
-                option.value = subcategory.id;
-                option.text = subcategory.name;
-                subcategorySelect.appendChild(option);
-            });
+        const subcategorySelect = document.getElementById("subcategory_id");
+        subcategories.forEach((subcategory) => {
+          const option = document.createElement("option");
+          option.value = subcategory.id;
+          option.text = subcategory.name;
+          subcategorySelect.appendChild(option);
+        });
 
-            const initialFlightOptionSelect = document.getElementById('flight_option_id_1');
-            flightOptions.forEach(flightOption => {
-                const option = document.createElement('option');
-                option.value = flightOption.id;
-                option.text = flightOption.option;
-                initialFlightOptionSelect.appendChild(option);
-            });
+        const initialFlightOptionSelect =
+          document.getElementById("flight_option_id_1");
+        flightOptions.forEach((flightOption) => {
+          const option = document.createElement("option");
+          option.value = flightOption.id;
+          option.text = flightOption.option;
+          initialFlightOptionSelect.appendChild(option);
+        });
 
-            const initialFieldOptionSelect = document.getElementById('field_option_id_1');
-            fieldOptions.forEach(fieldOption => {
-                const option = document.createElement('option');
-                option.value = fieldOption.id;
-                option.text = fieldOption.option;
-                initialFieldOptionSelect.appendChild(option);
-            });
-        }
+        const initialFieldOptionSelect =
+          document.getElementById("field_option_id_1");
+        fieldOptions.forEach((fieldOption) => {
+          const option = document.createElement("option");
+          option.value = fieldOption.id;
+          option.text = fieldOption.option;
+          initialFieldOptionSelect.appendChild(option);
+        });
+      }
 
-        document.addEventListener('DOMContentLoaded', populateOptions);
+      document.addEventListener("DOMContentLoaded", populateOptions);
 
-        function addCondition() {
-            const conditionsDiv = document.getElementById('conditions');
-            const index = conditionsDiv.querySelectorAll('.condition').length + 1;
+      function addCondition() {
+        const conditionsDiv = document.getElementById("conditions");
+        const index = conditionsDiv.querySelectorAll(".condition").length + 1;
 
-            const conditionDiv = document.createElement('div');
-            conditionDiv.className = 'condition';
-            conditionDiv.innerHTML = `
+        const conditionDiv = document.createElement("div");
+        conditionDiv.className = "condition";
+        conditionDiv.id = `condition_${index}`;
+        conditionDiv.innerHTML = `
                 <h3>조건 ${index}</h3>
                 <label for="condition_${index}">조건:</label><br>
                 <input type="text" id="condition_${index}" name="condition_${index}" style="margin-bottom: 5px;"><br>
@@ -68,69 +71,132 @@
                 <select id="flight_option_id_${index}" name="flight_option_id_${index}" style="margin-bottom: 5px;"></select><br>
 
                 <label for="field_option_id_${index}">기내반입/수하물:</label><br>
-                <select id="field_option_id_${index}" name="field_option_id_${index}" style="margin-bottom: 5px;"></select><br><br>
+                <select id="field_option_id_${index}" name="field_option_id_${index}" style="margin-bottom: 5px;"></select><br>
+                <button type="button" onclick="removeCondition(${index})">조건 삭제</button>
+                <br />
             `;
 
-            conditionsDiv.appendChild(conditionDiv);
+        conditionsDiv.appendChild(conditionDiv);
 
-            const flightOptionSelect = conditionDiv.querySelector(`#flight_option_id_${index}`);
-            const fieldOptionSelect = conditionDiv.querySelector(`#field_option_id_${index}`);
+        const flightOptionSelect = conditionDiv.querySelector(
+          `#flight_option_id_${index}`
+        );
+        const fieldOptionSelect = conditionDiv.querySelector(
+          `#field_option_id_${index}`
+        );
 
-            fetchOptions('/flight_options/').then(flightOptions => {
-                flightOptions.forEach(flightOption => {
-                    const option = document.createElement('option');
-                    option.value = flightOption.id;
-                    option.text = flightOption.option;
-                    flightOptionSelect.appendChild(option);
-                });
-            });
+        fetchOptions("/flight_options/").then((flightOptions) => {
+          flightOptions.forEach((flightOption) => {
+            const option = document.createElement("option");
+            option.value = flightOption.id;
+            option.text = flightOption.option;
+            flightOptionSelect.appendChild(option);
+          });
+        });
 
-            fetchOptions('/field_options/').then(fieldOptions => {
-                fieldOptions.forEach(fieldOption => {
-                    const option = document.createElement('option');
-                    option.value = fieldOption.id;
-                    option.text = fieldOption.option;
-                    fieldOptionSelect.appendChild(option);
-                });
-            });
-        }
+        fetchOptions("/field_options/").then((fieldOptions) => {
+          fieldOptions.forEach((fieldOption) => {
+            const option = document.createElement("option");
+            option.value = fieldOption.id;
+            option.text = fieldOption.option;
+            fieldOptionSelect.appendChild(option);
+          });
+        });
+      }
+
+      function removeCondition(index) {
+        const conditionDiv = document.getElementById(`condition_${index}`);
+        conditionDiv.remove();
+      }
     </script>
-</head>
-<body>
+  </head>
+  <body>
     <h1>품목 및 조건 추가</h1>
-    <form action="/categories/{category_id}/subcategories/{subcategory_id}/items/" method="post">
-        <label for="item_name">품목 명:</label><br>
-        <input type="text" id="item_name" name="item_name" style="margin-bottom: 5px;"><br>
+    <form
+      action="/categories/{category_id}/subcategories/{subcategory_id}/items/"
+      method="post"
+    >
+      <label for="item_name">품목 명:</label><br />
+      <input
+        type="text"
+        id="item_name"
+        name="item_name"
+        style="margin-bottom: 5px"
+      /><br />
 
-        <label for="image_path">이미지 경로:</label><br>
-        <input type="text" id="image_path" name="image_path" style="margin-bottom: 5px;"><br>
+      <label for="image_path">이미지 경로:</label><br />
+      <input
+        type="text"
+        id="image_path"
+        name="image_path"
+        style="margin-bottom: 5px"
+      /><br />
 
-        <label for="category_id">분류:</label><br>
-        <select id="category_id" name="category_id" style="margin-bottom: 5px;"></select><br>
+      <label for="category_id">분류:</label><br />
+      <select
+        id="category_id"
+        name="category_id"
+        style="margin-bottom: 5px"
+      ></select
+      ><br />
 
-        <label for="subcategory_id">소분류:</label><br>
-        <select id="subcategory_id" name="subcategory_id" style="margin-bottom: 5px;"></select><br><br>
+      <label for="subcategory_id">소분류:</label><br />
+      <select
+        id="subcategory_id"
+        name="subcategory_id"
+        style="margin-bottom: 5px"
+      ></select
+      ><br /><br />
 
-        <div id="conditions">
-            <div class="condition">
-                <h3>조건 1</h3>
-                <label for="condition_1">조건:</label><br>
-                <input type="text" id="condition_1" name="condition_1" style="margin-bottom: 5px;"><br>
+      <div id="conditions">
+        <div class="condition">
+          <h3>조건 1</h3>
+          <label for="condition_1">조건:</label><br />
+          <input
+            type="text"
+            id="condition_1"
+            name="condition_1"
+            style="margin-bottom: 5px"
+          /><br />
 
-                <label for="allowed_1">반입 가능 여부:</label><br>
-                <input type="radio" id="allowed_true_1" name="allowed_1" value="true" style="margin-right: 5px;">예
-                <input type="radio" id="allowed_false_1" name="allowed_1" value="false" style="margin-right: 5px;">아니오<br>
+          <label for="allowed_1">반입 가능 여부:</label><br />
+          <input
+            type="radio"
+            id="allowed_true_1"
+            name="allowed_1"
+            value="true"
+            style="margin-right: 5px"
+          />예
+          <input
+            type="radio"
+            id="allowed_false_1"
+            name="allowed_1"
+            value="false"
+            style="margin-right: 5px"
+          />아니오<br />
 
-                <label for="flight_option_id_1">국제/국내선:</label><br>
-                <select id="flight_option_id_1" name="flight_option_id_1" style="margin-bottom: 5px;"></select><br>
+          <label for="flight_option_id_1">국제/국내선:</label><br />
+          <select
+            id="flight_option_id_1"
+            name="flight_option_id_1"
+            style="margin-bottom: 5px"
+          ></select
+          ><br />
 
-                <label for="field_option_id_1">기내반입/수하물:</label><br>
-                <select id="field_option_id_1" name="field_option_id_1" style="margin-bottom: 5px;"></select><br><br>
-            </div>
+          <label for="field_option_id_1">기내반입/수하물:</label><br />
+          <select
+            id="field_option_id_1"
+            name="field_option_id_1"
+            style="margin-bottom: 5px"
+          ></select>
+          <br />
+          <button type="button" onclick="removeCondition(1)">조건 삭제</button>
         </div>
+      </div>
+      <br />
 
-        <button type="button" onclick="addCondition()">조건 추가</button><br><br>
-        <input type="submit" value="품목 생성">
+      <button type="button" onclick="addCondition()">조건 추가</button><br />
+      <input type="submit" value="품목 생성" />
     </form>
-</body>
+  </body>
 </html>
