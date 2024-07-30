@@ -69,10 +69,8 @@ def get_prohibited_item_by_id(db: Session, id: int) -> ProhibitedItem:
     return item
 
 
-def get_condition_by_name(db: Session, name: str, is_international: bool = None, is_domestic: bool = None):
-    item = db.query(ProhibitedItem).filter(ProhibitedItem.item_name == {name}).first()
-    if item:
-        item.conditions = get_item_conditions(db, item.id, is_international=is_international, is_domestic=is_domestic)
+def get_condition_by_name(db: Session, name: str):
+    item = db.query(ProhibitedItem).filter(ProhibitedItem.item_name == name).first()
     return item
 
 async def create_suggestion(db: Session, suggestion: SuggestionCreate):

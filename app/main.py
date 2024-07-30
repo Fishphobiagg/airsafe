@@ -178,19 +178,22 @@ async def get_item_by_search_term(
     is_domestic: Optional[bool] = Query(None),
     db: Session = Depends(get_db)
 ):
-    item = get_condition_by_name(db=db, name=search_term, is_international=is_international, is_domestic=is_domestic)
+    item = get_condition_by_name(db=db, name=search_term)
     if not item:
         await create_search_history(db, search_term=search_term)
         return JSONResponse(content=ItemNotFound(message=f"Item : {search_term} is not found").model_dump(), 
                             status_code=404, 
                             media_type="application/json")
     
+    
+    await create_search_history(db, search_term=search_term, prohibited_item_id=item.id)
+    conditions = get_item_conditions(db=db, prohibited_item_id=item.id, is_domestic=is_domestic, is_international=is_international )
 
-    cabin_conditions = [condition.condition for condition in item.conditions if condition.field_option.option == "cabin"]
-    trust_conditions = [condition.condition for condition in item.conditions if condition.field_option.option == "trust"]
+    cabin_conditions = [condition.condition for condition in conditions if condition.field_option.option == "cabin"]
+    trust_conditions = [condition.condition for condition in conditions if condition.field_option.option == "trust"]
         
-    cabin_allowed = [condition.allowed for condition in item.conditions if condition.field_option.option == "cabin"]
-    trust_allowed = [condition.allowed for condition in item.conditions if condition.field_option.option == "trust"]
+    cabin_allowed = [condition.allowed for condition in conditions if condition.field_option.option == "cabin"]
+    trust_allowed = [condition.allowed for condition in conditions if condition.field_option.option == "trust"]
 
     cabin_status = '△' if True in cabin_allowed and False in cabin_allowed else ('O' if all(c == True for c in cabin_allowed) else 'X')
     trust_status = '△' if True in trust_allowed and False in trust_allowed else ('O' if all(c == True for c in trust_allowed) else 'X')
@@ -201,7 +204,7 @@ async def get_item_by_search_term(
             "subcategory": item.subcategory.name,
             "item_name": item.item_name,
             "image_path": item.image_path,
-            "flight_option": item.conditions.flight_option.option,
+            "flight_option": conditions[0].flight_option.option,
             "cabin": {
                 "availability": cabin_status,
                 "condition_description": cabin_conditions
@@ -212,7 +215,6 @@ async def get_item_by_search_term(
             }
         }
     
-    await create_search_history(db, search_term=search_term, prohibited_item_id=item.id)
     return SearchResponse(search_term=search_term, items=[item_dict])
 
 @app.post("/suggestions/", 
