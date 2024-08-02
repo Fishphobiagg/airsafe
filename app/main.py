@@ -2,8 +2,24 @@ from fastapi import FastAPI, Depends, Path, Request, Query, Form
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse, HTMLResponse
 
-from app.schemas import SearchHistoryResponse, SubcategoryCreate, SearchResponse,ProhibitedItemBase, ItemNotFound, Suggestion, ProhibitedItemList, SuggestionCreate, Subcategory, SubcategoryCreate, ProhibitedItemCreate, ConditionCreate, ProhibitedItemCondition, Category, FieldOption, FlightOption
-from app.crud import get_item_conditions, create_prohibited_item_with_conditions, get_top_search_histories, get_prohibited_item_by_id, get_condition_by_name, create_search_history, search_prohibited_items, create_suggestion, insert_subcategory, get_categories, get_field_options, get_flight_options, get_subcategories
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+
+from app.schemas import (
+    SearchHistoryResponse, SubcategoryCreate, SearchResponse,
+    ProhibitedItemBase, ItemNotFound, Suggestion, ProhibitedItemList,
+    SuggestionCreate, Subcategory, ProhibitedItemCreate, ConditionCreate,
+    ProhibitedItemCondition, Category, FieldOption, FlightOption
+)
+from app.crud import (
+    get_item_conditions, create_prohibited_item_with_conditions, 
+    get_top_search_histories, get_prohibited_item_by_id, get_condition_by_name, 
+    create_search_history, search_prohibited_items, create_suggestion, 
+    insert_subcategory, get_categories, get_field_options, get_flight_options, 
+    get_subcategories
+)
+
 from app.database import SessionLocal, init_db
 
 from fastapi.staticfiles import StaticFiles
@@ -14,11 +30,16 @@ from typing import Optional, Union, List
 
 init_db()
 
+limiter = Limiter(key_func=get_remote_address, default_limits=["100/day"])
+
 app = FastAPI(swagger_ui_parameters={"syntaxHighlight.theme": "obsidian"})
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-origins = ["*"]
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+origins = ["http://localhost:3000", "https://air-safe.co.kr"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -222,7 +243,9 @@ async def get_item_by_search_term(
           status_code=201,
           summary="사용자의 건의사항을 추가하는 API",
           description="사용자가 입력한 건의사항을 데이터베이스에 저장합니다.")
+@limiter.limit("10/day")
 async def create_user_suggestion(
+    request: Request,
     suggestion: SuggestionCreate,
     db: Session = Depends(get_db)
 ):
