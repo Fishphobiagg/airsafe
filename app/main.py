@@ -39,7 +39,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-origins = ["http://localhost:3000", "https://air-safe.co.kr"]
+origins = ["http://localhost:3000", "https://air-safe.co.kr", "https://dev.d32rv7sfiydvj1.amplifyapp.com"]
 
 app.add_middleware(
     CORSMiddleware,
