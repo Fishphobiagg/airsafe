@@ -20,7 +20,7 @@ async def create_prohibited_item(db: Session, item: ProhibitedItemCreate):
     return db_item
 
 def search_prohibited_items(db: Session, query: str):
-    items = db.query(ProhibitedItem).filter(ProhibitedItem.item_name.ilike(bindparam('query'))).params(query=f'%{query}%').all()
+    items = db.query(ProhibitedItem).filter(ProhibitedItem.item_name.ilike(f'%{query}%')).all()
     return items
 
 async def create_search_history(db: Session, search_term: str, prohibited_item_id: int = None):
